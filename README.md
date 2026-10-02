@@ -12,6 +12,8 @@
 
 ---
 
+> ℹ️ **Nota de diseño:** el **Router Cisco** está del lado de los **Usuarios** (VLAN 10) y el **FortiGate (v7.6.2)** del lado del **Servidor Web**. El Usuario es una VM **Ubuntu** que se conecta al FortiGate con una **VPN IPsec de acceso remoto** usando el cliente `vpnc`. El FortiGate del laboratorio opera con **cifrado bajo (low encryption)**: solo admite **DES**, por lo que la VPN usa IPsec con DES (SSL VPN no está disponible con esa licencia) y el cliente se configura al mismo nivel.
+
 ---
 
 ## 📋 Tabla de Contenido
@@ -440,6 +442,12 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 |---|---|
 | Addresses to assign to connected endpoints | `20.25.30.193-20.25.30.200` |
 | Subnet for connected endpoints | `255.255.255.255` |
+| FortiClient settings → EMS SN verification | **Desactivado** |
+| FortiClient settings → Save password | Activado (valor por defecto) |
+| FortiClient settings → Auto Connect | Desactivado |
+| FortiClient settings → Always up (keep alive) | Desactivado |
+
+> **EMS SN verification → Desactivado:** la plantilla de FortiClient exige que el cliente sea un FortiClient registrado en un servidor EMS. El cliente `vpnc` no lo es, así que se desactiva aquí, antes de crear el túnel (viene activado por defecto).
 
 #### 8.3 Bloque Local FortiGate
 
@@ -462,19 +470,7 @@ En la pantalla **Review** se listan los objetos que el asistente crea (grupos de
 
 > Ver evidencia: [13_vpn_resumen_fortigate.png](screenshots/13_vpn_resumen_fortigate.png)
 
-#### 8.5 Desactivar la verificación EMS
-
-La plantilla de FortiClient exige que el cliente sea un FortiClient registrado en un servidor EMS. El cliente `vpnc` no lo es, así que se desactiva.
-
-**Ruta:** `VPN → VPN Tunnels → VPN-Remoto → Edit → Tunnel Settings → Network`
-
-| Campo | Valor |
-|---|---|
-| EMS SN verification | Desactivado |
-
-Pulsar **OK**.
-
-#### 8.6 Verificar la Fase 1
+#### 8.5 Verificar la Fase 1
 
 Desde la consola del FortiGate (solo lectura):
 
@@ -656,7 +652,7 @@ El SSH debe **volver a fallar**, confirmando que solo funciona con la VPN activa
 
 **12.4 — Si la VPN no conecta**
 
-1. Confirmar que ambos lados usan **IKEv1**, la **misma clave compartida** y propuestas **DES** (Paso 8.6 y archivo del Paso 11).
+1. Confirmar que ambos lados usan **IKEv1**, la **misma clave compartida** y propuestas **DES** (Paso 8.5 y archivo del Paso 11).
 2. Confirmar que `203.0.113.3` responde al ping desde el Usuario (Paso 6).
 3. Ver la negociación del lado del cliente: `sudo vpnc --debug 3 fortigate.conf`.
 4. Ver la negociación del lado del FortiGate: `diagnose debug application ike -1` y `diagnose debug enable` (apagar con `diagnose debug disable`). `no proposal chosen` indica propuestas distintas; un rechazo de autenticación indica usuario, grupo o clave incorrectos.
@@ -683,7 +679,7 @@ Numeradas en el orden en que se toman durante el procedimiento.
 | 11 | [`11_vpn_tunel_fortigate.png`](screenshots/11_vpn_tunel_fortigate.png) | 8.1 | Asistente 7.6.2, bloque VPN Tunnel (FortiClient, IKE Version 1). |
 | 12 | [`12_vpn_endpoint_local_fortigate.png`](screenshots/12_vpn_endpoint_local_fortigate.png) | 8.2–8.3 | Bloques Remote Endpoint y Local FortiGate. |
 | 13 | [`13_vpn_resumen_fortigate.png`](screenshots/13_vpn_resumen_fortigate.png) | 8.4 | Pantalla Review del asistente con los objetos creados. |
-| 14 | [`14_vpn_fase1_fortigate.png`](screenshots/14_vpn_fase1_fortigate.png) | 8.6 | `show vpn ipsec phase1-interface VPN-Remoto` con propuesta DES. |
+| 14 | [`14_vpn_fase1_fortigate.png`](screenshots/14_vpn_fase1_fortigate.png) | 8.5 | `show vpn ipsec phase1-interface VPN-Remoto` con propuesta DES. |
 | 15 | [`15_vip_fortigate.png`](screenshots/15_vip_fortigate.png) | 9.1 | Virtual IP `VIP-Web-Server` (203.0.113.4:443). |
 | 16 | [`16_politica_web_fortigate.png`](screenshots/16_politica_web_fortigate.png) | 9.2 | Política `Web-Publico`. |
 | 17 | [`17_vpnc_config.png`](screenshots/17_vpnc_config.png) | 11 | `vpnc --version` y archivo `/etc/vpnc/fortigate.conf`. |
