@@ -624,7 +624,7 @@ ip route | grep tun0
 `tun0` debe tener una IP del rango `20.25.30.193 – 20.25.30.200` y debe existir una ruta hacia `20.25.30.128/28` por `tun0`.
 
 ```bash
-ssh usuario@20.25.30.131
+ssh web-server@20.25.30.131
 traceroute 20.25.30.131
 ```
 El SSH debe conectar y el `traceroute` debe salir por la interfaz `tun0`.
