@@ -33,3 +33,23 @@ exit
 
 end
 write memory
+
+configure terminal
+
+ip access-list extended NAT-USUARIOS
+ permit ip 20.25.30.0 0.0.0.127 any
+exit
+
+interface Ethernet0/0
+ ip nat outside
+exit
+
+interface Ethernet0/1.10
+ ip nat inside
+exit
+
+ip nat inside source list NAT-USUARIOS interface Ethernet0/0 overload
+
+end
+write memory
+
