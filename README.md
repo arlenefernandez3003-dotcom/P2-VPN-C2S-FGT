@@ -12,6 +12,8 @@
 
 ---
 
+> ℹ️ **Nota de diseño:** el **Router Cisco** está del lado de los **Usuarios** (VLAN 10) y el **FortiGate (v7.6.2)** del lado del **Servidor Web**. El Usuario es una VM **Ubuntu** que se conecta al FortiGate con una **VPN IPsec de acceso remoto** usando el cliente `vpnc`. El FortiGate del laboratorio opera con **cifrado bajo (low encryption)**: solo admite **DES**, por lo que la VPN usa IPsec con DES (SSL VPN no está disponible con esa licencia) y el cliente se configura al mismo nivel.
+
 ---
 
 ## 📋 Tabla de Contenido
@@ -19,19 +21,18 @@
 1. [Objetivo del Laboratorio](#1-objetivo-del-laboratorio)
 2. [Topología y Direccionamiento](#2-topología-y-direccionamiento)
 3. [Procedimiento paso a paso](#3-procedimiento-paso-a-paso)
-   - [Paso 1. Partir de una configuración limpia](#paso-1-partir-de-una-configuración-limpia)
-   - [Paso 2. Nube PNET y PC local](#paso-2-nube-pnet-y-pc-local)
-   - [Paso 3. Switch de Usuarios (VLAN 10)](#paso-3-switch-de-usuarios-vlan-10)
-   - [Paso 4. Router Cisco: VLAN 10, DHCP y NAT](#paso-4-router-cisco-vlan-10-dhcp-y-nat)
-   - [Paso 5. Acceso inicial del FortiGate (CLI)](#paso-5-acceso-inicial-del-fortigate-cli)
-   - [Paso 6. Interfaces del FortiGate (GUI)](#paso-6-interfaces-del-fortigate-gui)
-   - [Paso 7. Verificar la conectividad del Usuario](#paso-7-verificar-la-conectividad-del-usuario)
-   - [Paso 8. Usuario VPN, grupo y objeto de red del servidor](#paso-8-usuario-vpn-grupo-y-objeto-de-red-del-servidor)
-   - [Paso 9. VPN de acceso remoto en el FortiGate (GUI)](#paso-9-vpn-de-acceso-remoto-en-el-fortigate-gui)
-   - [Paso 10. Publicar el Web Server sin VPN](#paso-10-publicar-el-web-server-sin-vpn)
-   - [Paso 11. Web Server (HTTPS y SSH)](#paso-11-web-server-https-y-ssh)
-   - [Paso 12. Cliente VPN en Ubuntu (vpnc)](#paso-12-cliente-vpn-en-ubuntu-vpnc)
-   - [Paso 13. Pruebas de verificación](#paso-13-pruebas-de-verificación)
+   - [Paso 1. Nube PNET y PC local](#paso-1-nube-pnet-y-pc-local)
+   - [Paso 2. Switch de Usuarios (VLAN 10)](#paso-2-switch-de-usuarios-vlan-10)
+   - [Paso 3. Router Cisco: VLAN 10, DHCP y NAT](#paso-3-router-cisco-vlan-10-dhcp-y-nat)
+   - [Paso 4. Acceso inicial del FortiGate (CLI)](#paso-4-acceso-inicial-del-fortigate-cli)
+   - [Paso 5. Interfaces del FortiGate (GUI)](#paso-5-interfaces-del-fortigate-gui)
+   - [Paso 6. Verificar la conectividad del Usuario](#paso-6-verificar-la-conectividad-del-usuario)
+   - [Paso 7. Usuario VPN, grupo y objeto de red del servidor](#paso-7-usuario-vpn-grupo-y-objeto-de-red-del-servidor)
+   - [Paso 8. VPN de acceso remoto en el FortiGate (GUI)](#paso-8-vpn-de-acceso-remoto-en-el-fortigate-gui)
+   - [Paso 9. Publicar el Web Server sin VPN](#paso-9-publicar-el-web-server-sin-vpn)
+   - [Paso 10. Web Server (HTTPS y SSH)](#paso-10-web-server-https-y-ssh)
+   - [Paso 11. Cliente VPN en Ubuntu (vpnc)](#paso-11-cliente-vpn-en-ubuntu-vpnc)
+   - [Paso 12. Pruebas de verificación](#paso-12-pruebas-de-verificación)
 4. [Capturas de Pantalla](#4-capturas-de-pantalla)
 5. [Estructura del Repositorio](#5-estructura-del-repositorio)
 
@@ -150,44 +151,7 @@ Los pasos están en el orden en que se ejecutan. Cada uno depende de los anterio
 
 ---
 
-### Paso 1. Partir de una configuración limpia
-
-Esta práctica no usa túneles sitio a sitio. Si los equipos traen configuración de VPN de otra práctica, se elimina antes de empezar.
-
-**Router Cisco** (quitar crypto map, claves, rutas y NAT previos):
-
-```bash
-enable
-configure terminal
-
-interface Ethernet0/0
- no crypto map CM-VPN
-exit
-
-no crypto map CM-VPN
-no crypto isakmp key Lab12345 address 203.0.113.3
-no crypto isakmp policy 10
-no crypto isakmp policy 20
-no crypto ipsec transform-set TS-DES-MD5
-no crypto ipsec transform-set TS-DES-SHA
-no ip route 20.25.30.128 255.255.255.240 203.0.113.3
-no ip access-list extended VPN-TRAFFIC
-no ip nat inside source list NAT-NO-VPN interface Ethernet0/0 overload
-no ip access-list extended NAT-NO-VPN
-
-end
-write memory
-```
-
-**FortiGate** (GUI): no debe existir ningún túnel IPsec ni sus objetos.
-
-1. `Policy & Objects → Firewall Policy`: eliminar las políticas de túneles anteriores (`vpn_*`).
-2. `Network → Static Routes`: eliminar las rutas hacia túneles anteriores.
-3. `VPN → IPsec Tunnels`: seleccionar el túnel anterior y pulsar **Delete**.
-
----
-
-### Paso 2. Nube PNET y PC local
+### Paso 1. Nube PNET y PC local
 
 Un nodo **Cloud** de PNETLab conecta `Et0/0` del Router Cisco, `port1` del FortiGate y el adaptador virtual de la PC local, todos en `203.0.113.0/29`.
 
@@ -205,13 +169,13 @@ Un nodo **Cloud** de PNETLab conecta `Et0/0` del Router Cisco, `port1` del Forti
 2. Type: `Management(Cloud0)`, nombre `Nube-PNET`.
 3. Conectar `Et0/0` del Router Cisco a `Nube-PNET`.
 4. Conectar `port1` del FortiGate a `Nube-PNET`.
-5. Conectar `Et0/1` del Router Cisco a `e0/0` de `SW-USUARIOS` (Paso 3).
+5. Conectar `Et0/1` del Router Cisco a `e0/0` de `SW-USUARIOS` (Paso 2).
 6. Conectar `e0/1` de `SW-USUARIOS` a la VM Ubuntu (Usuario).
 7. Conectar `port2` del FortiGate al Web Server.
 
 ---
 
-### Paso 3. Switch de Usuarios (VLAN 10)
+### Paso 2. Switch de Usuarios (VLAN 10)
 
 El puerto hacia el Router Cisco es un **trunk 802.1Q** y el puerto del Usuario es un **access en VLAN 10**. Consola del switch (script: [`scripts/sw-usuarios.txt`](scripts/sw-usuarios.txt)):
 
@@ -256,11 +220,11 @@ Debe mostrar VLAN 10 `USUARIOS` con `Et0/1` y el trunk `Et0/0` activo con VLAN 1
 
 ---
 
-### Paso 4. Router Cisco: VLAN 10, DHCP y NAT
+### Paso 3. Router Cisco: VLAN 10, DHCP y NAT
 
 El Router Cisco es el gateway de la VLAN 10 (router-on-a-stick), el servidor DHCP de los Usuarios y hace NAT (PAT) hacia la nube para que el FortiGate pueda responder al Usuario. Se pega un bloque `configure terminal … end` a la vez (script completo: [`scripts/cisco-base.txt`](scripts/cisco-base.txt)).
 
-**4.1 — Interfaces, VLAN 10 y DHCP**
+**3.1 — Interfaces, VLAN 10 y DHCP**
 
 ```bash
 enable
@@ -300,7 +264,7 @@ end
 write memory
 ```
 
-**4.2 — NAT (PAT) de los Usuarios hacia la nube**
+**3.2 — NAT (PAT) de los Usuarios hacia la nube**
 
 ```bash
 configure terminal
@@ -337,7 +301,7 @@ show ip nat translations
 
 ---
 
-### Paso 5. Acceso inicial del FortiGate (CLI)
+### Paso 4. Acceso inicial del FortiGate (CLI)
 
 Desde la consola del FortiGate (script: [`scripts/fortigate-cli.txt`](scripts/fortigate-cli.txt)):
 
@@ -358,11 +322,11 @@ Acceder desde el navegador de la PC local a `https://203.0.113.3` con las creden
 
 ---
 
-### Paso 6. Interfaces del FortiGate (GUI)
+### Paso 5. Interfaces del FortiGate (GUI)
 
 **Ruta:** `Network → Interfaces`
 
-**port1 — WAN-NUBE** (ya tiene IP desde el Paso 5; se completa el resto):
+**port1 — WAN-NUBE** (ya tiene IP desde el Paso 4; se completa el resto):
 
 | Campo | Valor |
 |---|---|
@@ -386,7 +350,7 @@ Acceder desde el navegador de la PC local a `https://203.0.113.3` con las creden
 
 ---
 
-### Paso 7. Verificar la conectividad del Usuario
+### Paso 6. Verificar la conectividad del Usuario
 
 Con el Router Cisco y el FortiGate configurados, comprobar que el Usuario recibe IP por DHCP y llega a la nube **antes** de crear la VPN.
 
@@ -409,11 +373,11 @@ El Usuario debe tener una IP del rango `20.25.30.3 – 20.25.30.126` con gateway
 
 ---
 
-### Paso 8. Usuario VPN, grupo y objeto de red del servidor
+### Paso 7. Usuario VPN, grupo y objeto de red del servidor
 
 El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y la red del servidor se define como objeto para limitar a qué llega el cliente VPN.
 
-**8.1 — Usuario local**
+**7.1 — Usuario local**
 
 **Ruta:** `User & Authentication → User Definition → Create New → Local User`
 
@@ -422,7 +386,7 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 | Username | `vpnuser` |
 | Password | `Lab12345` |
 
-**8.2 — Grupo de usuarios**
+**7.2 — Grupo de usuarios**
 
 **Ruta:** `User & Authentication → User Groups → Create New`
 
@@ -432,7 +396,7 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 | Type | `Firewall` |
 | Members | `vpnuser` |
 
-**8.3 — Objeto de dirección de la red del servidor**
+**7.3 — Objeto de dirección de la red del servidor**
 
 **Ruta:** `Policy & Objects → Addresses → Create New → Address`
 
@@ -446,11 +410,11 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 
 ---
 
-### Paso 9. VPN de acceso remoto en el FortiGate (GUI)
+### Paso 8. VPN de acceso remoto en el FortiGate (GUI)
 
 **Ruta:** `VPN → VPN Wizard` — plantilla **Remote Access**. Nombre del túnel: `VPN-Remoto`. El asistente de 7.6.2 tiene tres bloques (**Remote Endpoint**, **VPN Tunnel**, **Local FortiGate**).
 
-#### 9.1 Bloque VPN Tunnel
+#### 8.1 Bloque VPN Tunnel
 
 | Campo | Valor |
 |---|---|
@@ -472,14 +436,14 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 
 > Ver evidencia: [11_vpn_tunel_fortigate.png](screenshots/11_vpn_tunel_fortigate.png)
 
-#### 9.2 Bloque Remote Endpoint
+#### 8.2 Bloque Remote Endpoint
 
 | Campo | Valor |
 |---|---|
 | Addresses to assign to connected endpoints | `20.25.30.193-20.25.30.200` |
 | Subnet for connected endpoints | `255.255.255.255` |
 
-#### 9.3 Bloque Local FortiGate
+#### 8.3 Bloque Local FortiGate
 
 | Campo | Valor |
 |---|---|
@@ -492,7 +456,7 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 
 > Ver evidencia: [12_vpn_endpoint_local_fortigate.png](screenshots/12_vpn_endpoint_local_fortigate.png)
 
-#### 9.4 Resumen y Submit
+#### 8.4 Resumen y Submit
 
 En la pantalla **Review** se listan los objetos que el asistente crea (grupos de direcciones, interfaz de Fase 1 y Fase 2, zona y políticas). Pulsar **Submit** y esperar a que termine **sin mensajes de error**.
 
@@ -500,7 +464,7 @@ En la pantalla **Review** se listan los objetos que el asistente crea (grupos de
 
 > Ver evidencia: [13_vpn_resumen_fortigate.png](screenshots/13_vpn_resumen_fortigate.png)
 
-#### 9.5 Desactivar la verificación EMS
+#### 8.5 Desactivar la verificación EMS
 
 La plantilla de FortiClient exige que el cliente sea un FortiClient registrado en un servidor EMS. El cliente `vpnc` no lo es, así que se desactiva.
 
@@ -512,7 +476,7 @@ La plantilla de FortiClient exige que el cliente sea un FortiClient registrado e
 
 Pulsar **OK**.
 
-#### 9.6 Verificar la Fase 1
+#### 8.6 Verificar la Fase 1
 
 Desde la consola del FortiGate (solo lectura):
 
@@ -528,11 +492,11 @@ Revisar también en `Policy & Objects → Firewall Policy` las políticas `vpn_V
 
 ---
 
-### Paso 10. Publicar el Web Server sin VPN
+### Paso 9. Publicar el Web Server sin VPN
 
 El Usuario llega al servidor web por una IP pública (`203.0.113.4`) que el FortiGate traduce al servidor. Solo se publica el puerto **443**; el **22** (SSH) no se publica.
 
-**10.1 — Virtual IP**
+**9.1 — Virtual IP**
 
 **Ruta:** `Policy & Objects → Virtual IPs → Create New → Virtual IP`
 
@@ -550,7 +514,7 @@ El Usuario llega al servidor web por una IP pública (`203.0.113.4`) que el Fort
 
 > Ver evidencia: [15_vip_fortigate.png](screenshots/15_vip_fortigate.png)
 
-**10.2 — Política de firewall**
+**9.2 — Política de firewall**
 
 **Ruta:** `Policy & Objects → Firewall Policy → Create New`
 
@@ -570,7 +534,7 @@ El Usuario llega al servidor web por una IP pública (`203.0.113.4`) que el Fort
 
 ---
 
-### Paso 11. Web Server (HTTPS y SSH)
+### Paso 10. Web Server (HTTPS y SSH)
 
 Servidor Ubuntu con Apache + certificado autofirmado y servidor SSH (script completo: [`scripts/webserver-https.sh`](scripts/webserver-https.sh)):
 
@@ -600,18 +564,18 @@ ss -tlnp | grep -E ':(22|443)'
 
 ---
 
-### Paso 12. Cliente VPN en Ubuntu (vpnc)
+### Paso 11. Cliente VPN en Ubuntu (vpnc)
 
 El Usuario es una VM Ubuntu conectada a la VLAN 10. El cliente `vpnc` (compatible con IKEv1 + XAUTH) se configura con cifrado débil **solo porque el FortiGate del laboratorio admite únicamente DES** (script: [`scripts/vpnc-fortigate.conf`](scripts/vpnc-fortigate.conf)).
 
-**12.1 — Verificar que vpnc soporta DES**
+**11.1 — Verificar que vpnc soporta DES**
 
 ```bash
 vpnc --version
 ```
 La salida debe listar `des` en *Supported Encryptions* y `dh5` en *Supported DH-Groups*.
 
-**12.2 — Archivo de configuración**
+**11.2 — Archivo de configuración**
 
 ```bash
 sudo tee /etc/vpnc/fortigate.conf > /dev/null <<'EOF'
@@ -631,8 +595,8 @@ EOF
 | Parámetro | Valor | Corresponde en el FortiGate |
 |---|---|---|
 | `IPSec gateway` | `203.0.113.3` | IP de `port1` |
-| `IPSec secret` | `Lab12345` | Pre-shared key del Paso 9 |
-| `Xauth username` / `password` | `vpnuser` / `Lab12345` | Usuario del Paso 8 |
+| `IPSec secret` | `Lab12345` | Pre-shared key del Paso 8 |
+| `Xauth username` / `password` | `vpnuser` / `Lab12345` | Usuario del Paso 7 |
 | `IKE DH Group` | `dh5` | Grupos DH 5 y 14 de la Fase 1 |
 | `Enable weak encryption` | — | Propuesta `des-md5 des-sha1` |
 
@@ -640,9 +604,9 @@ EOF
 
 ---
 
-### Paso 13. Pruebas de verificación
+### Paso 12. Pruebas de verificación
 
-**13.1 — Sin VPN**
+**12.1 — Sin VPN**
 
 Desde el Usuario (Ubuntu, VLAN 10, IP por DHCP):
 
@@ -660,7 +624,7 @@ Los tres deben **fallar o quedar sin respuesta**: no hay ruta hacia `20.25.30.12
 
 > Ver evidencia: [18_acceso_web_sin_vpn.png](screenshots/18_acceso_web_sin_vpn.png), [19_ssh_sin_vpn_fallo.png](screenshots/19_ssh_sin_vpn_fallo.png)
 
-**13.2 — Con la VPN conectada**
+**12.2 — Con la VPN conectada**
 
 ```bash
 sudo vpnc fortigate.conf
@@ -682,7 +646,7 @@ diagnose vpn ike gateway list
 
 > Ver evidencia: [20_vpnc_conectado.png](screenshots/20_vpnc_conectado.png), [21_ssh_con_vpn.png](screenshots/21_ssh_con_vpn.png), [22_traceroute_con_vpn.png](screenshots/22_traceroute_con_vpn.png), [23_vpn_events_fortigate.png](screenshots/23_vpn_events_fortigate.png)
 
-**13.3 — Con la VPN desconectada**
+**12.3 — Con la VPN desconectada**
 
 ```bash
 sudo vpnc-disconnect
@@ -692,10 +656,10 @@ El SSH debe **volver a fallar**, confirmando que solo funciona con la VPN activa
 
 > Ver evidencia: [24_ssh_vpn_caida.png](screenshots/24_ssh_vpn_caida.png)
 
-**13.4 — Si la VPN no conecta**
+**12.4 — Si la VPN no conecta**
 
-1. Confirmar que ambos lados usan **IKEv1**, la **misma clave compartida** y propuestas **DES** (Paso 9.6 y archivo del Paso 12).
-2. Confirmar que `203.0.113.3` responde al ping desde el Usuario (Paso 7).
+1. Confirmar que ambos lados usan **IKEv1**, la **misma clave compartida** y propuestas **DES** (Paso 8.6 y archivo del Paso 11).
+2. Confirmar que `203.0.113.3` responde al ping desde el Usuario (Paso 6).
 3. Ver la negociación del lado del cliente: `sudo vpnc --debug 3 fortigate.conf`.
 4. Ver la negociación del lado del FortiGate: `diagnose debug application ike -1` y `diagnose debug enable` (apagar con `diagnose debug disable`). `no proposal chosen` indica propuestas distintas; un rechazo de autenticación indica usuario, grupo o clave incorrectos.
 5. Limpiar el estado antes de reintentar: `sudo vpnc-disconnect` en el Usuario y `diagnose vpn ike gateway flush name VPN-Remoto` en el FortiGate.
@@ -708,30 +672,30 @@ Numeradas en el orden en que se toman durante el procedimiento.
 
 | # | Archivo | Paso | Descripción |
 |---|---|---|---|
-| 01 | [`01_switch_vlan10.png`](screenshots/01_switch_vlan10.png) | 3 | SW-USUARIOS con `show vlan brief` y `show interfaces trunk`. |
-| 02 | [`02_cisco_interfaces.png`](screenshots/02_cisco_interfaces.png) | 4 | `show ip interface brief` del Cisco: `Et0/0` y `Et0/1.10` en `up/up`. |
-| 03 | [`03_cisco_dhcp.png`](screenshots/03_cisco_dhcp.png) | 4 | `show ip dhcp pool` del Cisco, rango `20.25.30.3–126`. |
-| 04 | [`04_cisco_nat.png`](screenshots/04_cisco_nat.png) | 4 | Config de NAT del Cisco (`NAT-USUARIOS`). |
-| 05 | [`05_cli_acceso_fortigate.png`](screenshots/05_cli_acceso_fortigate.png) | 5 | CLI del FortiGate con la config inicial de `port1` (203.0.113.3/29). |
-| 06 | [`06_interfaces_fortigate.png`](screenshots/06_interfaces_fortigate.png) | 6 | `Network → Interfaces` del FortiGate: port1 WAN y port2 LAN-SERVIDOR. |
-| 07 | [`07_ping_nube.png`](screenshots/07_ping_nube.png) | 7 | Ping desde la PC local a `203.0.113.2` y `203.0.113.3`. |
-| 08 | [`08_usuario_dhcp.png`](screenshots/08_usuario_dhcp.png) | 7 | Usuario Ubuntu con IP por DHCP y ping al Cisco y al FortiGate. |
-| 09 | [`09_usuario_grupo_fortigate.png`](screenshots/09_usuario_grupo_fortigate.png) | 8 | Usuario `vpnuser` y grupo `VPN-USER`. |
-| 10 | [`10_objeto_red_servidor.png`](screenshots/10_objeto_red_servidor.png) | 8 | Objeto `Red-Servidor` (20.25.30.128/28). |
-| 11 | [`11_vpn_tunel_fortigate.png`](screenshots/11_vpn_tunel_fortigate.png) | 9.1 | Asistente 7.6.2, bloque VPN Tunnel (FortiClient, IKE Version 1). |
-| 12 | [`12_vpn_endpoint_local_fortigate.png`](screenshots/12_vpn_endpoint_local_fortigate.png) | 9.2–9.3 | Bloques Remote Endpoint y Local FortiGate. |
-| 13 | [`13_vpn_resumen_fortigate.png`](screenshots/13_vpn_resumen_fortigate.png) | 9.4 | Pantalla Review del asistente con los objetos creados. |
-| 14 | [`14_vpn_fase1_fortigate.png`](screenshots/14_vpn_fase1_fortigate.png) | 9.6 | `show vpn ipsec phase1-interface VPN-Remoto` con propuesta DES. |
-| 15 | [`15_vip_fortigate.png`](screenshots/15_vip_fortigate.png) | 10.1 | Virtual IP `VIP-Web-Server` (203.0.113.4:443). |
-| 16 | [`16_politica_web_fortigate.png`](screenshots/16_politica_web_fortigate.png) | 10.2 | Política `Web-Publico`. |
-| 17 | [`17_vpnc_config.png`](screenshots/17_vpnc_config.png) | 12 | `vpnc --version` y archivo `/etc/vpnc/fortigate.conf`. |
-| 18 | [`18_acceso_web_sin_vpn.png`](screenshots/18_acceso_web_sin_vpn.png) | 13.1 | `curl -k https://203.0.113.4/` respondiendo sin VPN. |
-| 19 | [`19_ssh_sin_vpn_fallo.png`](screenshots/19_ssh_sin_vpn_fallo.png) | 13.1 | SSH y traceroute fallando sin VPN. |
-| 20 | [`20_vpnc_conectado.png`](screenshots/20_vpnc_conectado.png) | 13.2 | `vpnc` conectado, `tun0` con IP del pool. |
-| 21 | [`21_ssh_con_vpn.png`](screenshots/21_ssh_con_vpn.png) | 13.2 | SSH exitoso al servidor con la VPN activa. |
-| 22 | [`22_traceroute_con_vpn.png`](screenshots/22_traceroute_con_vpn.png) | 13.2 | Traceroute al servidor por `tun0`. |
-| 23 | [`23_vpn_events_fortigate.png`](screenshots/23_vpn_events_fortigate.png) | 13.2 | VPN Events del FortiGate con la negociación de `VPN-Remoto`. |
-| 24 | [`24_ssh_vpn_caida.png`](screenshots/24_ssh_vpn_caida.png) | 13.3 | SSH fallando tras desconectar la VPN. |
+| 01 | [`01_switch_vlan10.png`](screenshots/01_switch_vlan10.png) | 2 | SW-USUARIOS con `show vlan brief` y `show interfaces trunk`. |
+| 02 | [`02_cisco_interfaces.png`](screenshots/02_cisco_interfaces.png) | 3 | `show ip interface brief` del Cisco: `Et0/0` y `Et0/1.10` en `up/up`. |
+| 03 | [`03_cisco_dhcp.png`](screenshots/03_cisco_dhcp.png) | 3 | `show ip dhcp pool` del Cisco, rango `20.25.30.3–126`. |
+| 04 | [`04_cisco_nat.png`](screenshots/04_cisco_nat.png) | 3 | Config de NAT del Cisco (`NAT-USUARIOS`). |
+| 05 | [`05_cli_acceso_fortigate.png`](screenshots/05_cli_acceso_fortigate.png) | 4 | CLI del FortiGate con la config inicial de `port1` (203.0.113.3/29). |
+| 06 | [`06_interfaces_fortigate.png`](screenshots/06_interfaces_fortigate.png) | 5 | `Network → Interfaces` del FortiGate: port1 WAN y port2 LAN-SERVIDOR. |
+| 07 | [`07_ping_nube.png`](screenshots/07_ping_nube.png) | 6 | Ping desde la PC local a `203.0.113.2` y `203.0.113.3`. |
+| 08 | [`08_usuario_dhcp.png`](screenshots/08_usuario_dhcp.png) | 6 | Usuario Ubuntu con IP por DHCP y ping al Cisco y al FortiGate. |
+| 09 | [`09_usuario_grupo_fortigate.png`](screenshots/09_usuario_grupo_fortigate.png) | 7 | Usuario `vpnuser` y grupo `VPN-USER`. |
+| 10 | [`10_objeto_red_servidor.png`](screenshots/10_objeto_red_servidor.png) | 7 | Objeto `Red-Servidor` (20.25.30.128/28). |
+| 11 | [`11_vpn_tunel_fortigate.png`](screenshots/11_vpn_tunel_fortigate.png) | 8.1 | Asistente 7.6.2, bloque VPN Tunnel (FortiClient, IKE Version 1). |
+| 12 | [`12_vpn_endpoint_local_fortigate.png`](screenshots/12_vpn_endpoint_local_fortigate.png) | 8.2–8.3 | Bloques Remote Endpoint y Local FortiGate. |
+| 13 | [`13_vpn_resumen_fortigate.png`](screenshots/13_vpn_resumen_fortigate.png) | 8.4 | Pantalla Review del asistente con los objetos creados. |
+| 14 | [`14_vpn_fase1_fortigate.png`](screenshots/14_vpn_fase1_fortigate.png) | 8.6 | `show vpn ipsec phase1-interface VPN-Remoto` con propuesta DES. |
+| 15 | [`15_vip_fortigate.png`](screenshots/15_vip_fortigate.png) | 9.1 | Virtual IP `VIP-Web-Server` (203.0.113.4:443). |
+| 16 | [`16_politica_web_fortigate.png`](screenshots/16_politica_web_fortigate.png) | 9.2 | Política `Web-Publico`. |
+| 17 | [`17_vpnc_config.png`](screenshots/17_vpnc_config.png) | 11 | `vpnc --version` y archivo `/etc/vpnc/fortigate.conf`. |
+| 18 | [`18_acceso_web_sin_vpn.png`](screenshots/18_acceso_web_sin_vpn.png) | 12.1 | `curl -k https://203.0.113.4/` respondiendo sin VPN. |
+| 19 | [`19_ssh_sin_vpn_fallo.png`](screenshots/19_ssh_sin_vpn_fallo.png) | 12.1 | SSH y traceroute fallando sin VPN. |
+| 20 | [`20_vpnc_conectado.png`](screenshots/20_vpnc_conectado.png) | 12.2 | `vpnc` conectado, `tun0` con IP del pool. |
+| 21 | [`21_ssh_con_vpn.png`](screenshots/21_ssh_con_vpn.png) | 12.2 | SSH exitoso al servidor con la VPN activa. |
+| 22 | [`22_traceroute_con_vpn.png`](screenshots/22_traceroute_con_vpn.png) | 12.2 | Traceroute al servidor por `tun0`. |
+| 23 | [`23_vpn_events_fortigate.png`](screenshots/23_vpn_events_fortigate.png) | 12.2 | VPN Events del FortiGate con la negociación de `VPN-Remoto`. |
+| 24 | [`24_ssh_vpn_caida.png`](screenshots/24_ssh_vpn_caida.png) | 12.3 | SSH fallando tras desconectar la VPN. |
 
 ---
 
