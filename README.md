@@ -464,8 +464,6 @@ El asistente de la VPN exige un grupo de usuarios para autenticar al cliente, y 
 
 En la pantalla **Review** se listan los objetos que el asistente crea (grupos de direcciones, interfaz de Fase 1 y Fase 2, zona y políticas). Pulsar **Submit** y esperar a que termine **sin mensajes de error**.
 
-> ⚠️ El asistente crea todos los objetos en una sola operación. Si aparece un error (por ejemplo `object VPN-Remoto already exists`), el túnel quedó a medias: borrarlo desde `VPN → IPsec Tunnels` (antes, las políticas `vpn_VPN-Remoto_*` en `Policy & Objects → Firewall Policy`) y repetir el asistente completo.
-
 > Ver evidencia: [13_vpn_resumen_fortigate.png](screenshots/13_vpn_resumen_fortigate.png)
 
 #### 8.5 Verificar la Fase 1
