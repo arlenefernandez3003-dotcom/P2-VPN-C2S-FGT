@@ -640,7 +640,7 @@ diagnose vpn ike gateway list
 
 ```bash
 sudo vpnc-disconnect
-ssh usuario@20.25.30.131
+ssh web-server@20.25.30.131
 ```
 El SSH debe **volver a fallar**, confirmando que solo funciona con la VPN activa.
 
