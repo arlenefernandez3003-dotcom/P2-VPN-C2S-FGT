@@ -606,8 +606,8 @@ curl -k https://203.0.113.4/
 Debe responder el Web Server: **el acceso web no necesita VPN**.
 
 ```bash
-ssh usuario@20.25.30.131
-ssh usuario@203.0.113.4
+ssh web-server@20.25.30.131
+ssh web-server@203.0.113.4
 traceroute 20.25.30.131
 ```
 Los tres deben **fallar o quedar sin respuesta**: no hay ruta hacia `20.25.30.128/28` y el puerto 22 no está publicado.
