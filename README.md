@@ -12,8 +12,6 @@
 
 ---
 
-> ℹ️ **Nota de diseño:** el **Router Cisco** está del lado de los **Usuarios** (VLAN 10) y el **FortiGate (v7.6.2)** del lado del **Servidor Web**. El Usuario es una VM **Ubuntu** que se conecta al FortiGate con una **VPN IPsec de acceso remoto** usando el cliente `vpnc`. El FortiGate del laboratorio opera con **cifrado bajo (low encryption)**: solo admite **DES**, por lo que la VPN usa IPsec con DES (SSL VPN no está disponible con esa licencia) y el cliente se configura al mismo nivel.
-
 ---
 
 ## 📋 Tabla de Contenido
